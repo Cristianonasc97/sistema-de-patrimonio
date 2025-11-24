@@ -1,20 +1,38 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
 
-# Run and deploy your AI Studio app
+# Sistema de Patrimônio
 
-This contains everything you need to run your app locally.
+Aplicação **SPA (Single Page Application)** desenvolvida com **React + Vite**, utilizando **SQLite via WebAssembly (sql.js)** para armazenamento local no navegador com persistência em **IndexedDB**.  
+Ideal para controle de bens e movimentações sem necessidade de servidor backend.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1_5Xwn04MIsp8X-1yfXjjSvvjwgNlX79z
+---
 
-## Run Locally
+## Funcionalidades
+- Cadastro e gerenciamento de bens.
+- Controle de movimentações.
+- Relatórios simples.
+- Persistência local via IndexedDB.
+- **Modo offline** e **instalação como PWA**.
+- Interface responsiva.
 
-**Prerequisites:**  Node.js
+---
 
+## Tecnologias
+- **React + Vite**
+- **TypeScript**
+- **SQLite (sql.js)**
+- **IndexedDB**
+- **PWA (Service Worker + Manifest)**
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+---
+
+## Pré-requisitos
+- **Node.js** (versão 18 ou superior)
+- **npm** ou **yarn**
+
+---
+
+## Como rodar localmente
+1. Clone o repositório:
+   ```bash
+   git clone https://github.com/Cristianonasc97/sistema-de-patrimonio.git
+   cd sistema-de-patrimonio
