@@ -1,0 +1,5 @@
+{
+  "name": "Sistema de Patrimônio",
+  "description": "Um sistema completo para gerenciamento de patrimônio, incluindo cadastro de bens, controle de movimentações, inventário e geração de relatórios. Desenvolvido com React e SQLite (via sql.js).",
+  "requestFramePermissions": []
+}
