@@ -89,6 +89,7 @@ const FormEmprestimo: React.FC<PropsFormEmprestimo> = ({ bens, tiposMovimentacao
         pessoa: '',
         contato: '',
         pastoral: '',
+        observacao: '',
         dataEmprestimo: new Date().toISOString().split('T')[0],
     });
     const [bemSelecionado, setBemSelecionado] = useState<Bem | null>(null);
@@ -109,7 +110,7 @@ const FormEmprestimo: React.FC<PropsFormEmprestimo> = ({ bens, tiposMovimentacao
         }
     }, [dadosForm.tombo, bens]);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         const valorFinal = name === 'tombo' ? value.replace(/[^0-9]/g, '') : value;
         setDadosForm(prev => ({ ...prev, [name]: valorFinal }));
@@ -128,6 +129,7 @@ const FormEmprestimo: React.FC<PropsFormEmprestimo> = ({ bens, tiposMovimentacao
             pessoa: dadosForm.pessoa,
             contato: dadosForm.contato,
             pastoral: dadosForm.pastoral,
+            observacao: dadosForm.observacao || null,
             dataEmprestimo: dadosForm.dataEmprestimo,
         };
 
@@ -141,6 +143,7 @@ const FormEmprestimo: React.FC<PropsFormEmprestimo> = ({ bens, tiposMovimentacao
                 pessoa: '',
                 contato: '',
                 pastoral: '',
+                observacao: '',
                 dataEmprestimo: new Date().toISOString().split('T')[0],
             });
             setBemSelecionado(null);
@@ -178,6 +181,21 @@ const FormEmprestimo: React.FC<PropsFormEmprestimo> = ({ bens, tiposMovimentacao
                     <label className="block text-sm font-medium text-gray-700">Pastoral</label>
                     <input type="text" name="pastoral" value={dadosForm.pastoral} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
                 </div>
+            </div>
+            <div>
+                <label className="block text-sm font-medium text-gray-700">Observação (opcional)</label>
+                <textarea
+                    name="observacao"
+                    value={dadosForm.observacao}
+                    onChange={handleChange}
+                    maxLength={500}
+                    rows={4}
+                    placeholder="Ex: Emprestado para evento da Páscoa. Item deve ser devolvido limpo após o evento..."
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                    {dadosForm.observacao?.length || 0}/500 caracteres
+                </p>
             </div>
              <div>
                 <label className="block text-sm font-medium text-gray-700">Data do Empréstimo</label>
@@ -277,6 +295,12 @@ const FormDevolucao: React.FC<PropsFormDevolucao> = ({ movimentacoes, bens, aoSa
                     <p><span className="font-medium">Item:</span> {bens.find(b => b.id === emprestimoAtivo.bemId)?.nome || 'N/A'}</p>
                     <p><span className="font-medium">Responsável:</span> {emprestimoAtivo.pessoa}</p>
                     <p><span className="font-medium">Data do Empréstimo:</span> {emprestimoAtivo.dataEmprestimo}</p>
+                    {emprestimoAtivo.observacao && (
+                        <div className="mt-2 pt-2 border-t border-gray-200">
+                            <p className="font-medium text-gray-700">Observação:</p>
+                            <p className="text-sm text-gray-600 mt-1">{emprestimoAtivo.observacao}</p>
+                        </div>
+                    )}
                 </div>
             )}
 

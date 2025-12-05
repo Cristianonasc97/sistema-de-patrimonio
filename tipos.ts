@@ -70,6 +70,7 @@ export interface Movimentacao {
     pessoa: string;
     contato: string;
     pastoral: string;
+    observacao?: string | null;
     dataEmprestimo: string;
     dataDevolucao: string | null;
     // Joined data from API (optional, for display)

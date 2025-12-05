@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAutenticacao } from '../hooks/useAutenticacao';
 import { Pagina } from '../tipos';
 
@@ -20,6 +20,7 @@ const icones = {
 
 const Layout: React.FC<LayoutProps> = ({ children, aoNavegar }) => {
     const { usuario, logout } = useAutenticacao();
+    const [menuAberto, setMenuAberto] = useState(false);
 
     const itensMenu = [
         { pagina: Pagina.MENU_PRINCIPAL, rotulo: 'Menu Principal', icone: icones.menu, apenasAdmin: false },
@@ -30,10 +31,72 @@ const Layout: React.FC<LayoutProps> = ({ children, aoNavegar }) => {
         { pagina: Pagina.USUARIOS, rotulo: 'Cadastrar Usuário', icone: icones.usuarios, apenasAdmin: true },
     ];
 
+    // Close menu on ESC key
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setMenuAberto(false);
+        };
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, []);
+
+    // Prevent body scroll when mobile menu is open
+    useEffect(() => {
+        if (menuAberto) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [menuAberto]);
+
+    const handleNavegar = (pagina: Pagina) => {
+        aoNavegar(pagina);
+        setMenuAberto(false); // Close menu after navigation on mobile
+    };
+
     return (
         <div className="flex h-screen bg-gray-100">
+            {/* Hamburger Button (Mobile only) */}
+            <button
+                onClick={() => setMenuAberto(!menuAberto)}
+                className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-blue-800 text-white rounded-md shadow-lg hover:bg-blue-900 transition-colors"
+                aria-label="Toggle menu"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+            </button>
+
+            {/* Overlay Backdrop (Mobile only) */}
+            {menuAberto && (
+                <div
+                    className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
+                    onClick={() => setMenuAberto(false)}
+                    aria-hidden="true"
+                />
+            )}
+
             {/* Barra Lateral */}
-            <aside className="w-64 bg-blue-800 text-white flex flex-col">
+            <aside className={`
+                fixed lg:static inset-y-0 left-0 z-40
+                w-64 bg-blue-800 text-white flex flex-col
+                transform transition-transform duration-300 ease-in-out
+                ${menuAberto ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+            `}>
+                {/* Close button (Mobile only) */}
+                <button
+                    onClick={() => setMenuAberto(false)}
+                    className="lg:hidden absolute top-4 right-4 text-white hover:text-blue-200"
+                    aria-label="Close menu"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+
                 <div className="p-4 border-b border-blue-700">
                     <h1 className="text-2xl font-bold text-center">Patrimônio</h1>
                 </div>
@@ -42,8 +105,8 @@ const Layout: React.FC<LayoutProps> = ({ children, aoNavegar }) => {
                         (!item.apenasAdmin || usuario?.perfil?.nome === 'ADMIN') && (
                             <button
                                 key={item.pagina}
-                                onClick={() => aoNavegar(item.pagina)}
-                                className="w-full flex items-center px-4 py-2 text-blue-100 rounded-md hover:bg-blue-700 hover:text-white transition-colors duration-200"
+                                onClick={() => handleNavegar(item.pagina)}
+                                className="w-full flex items-center px-4 py-3 text-blue-100 rounded-md hover:bg-blue-700 hover:text-white transition-colors duration-200"
                             >
                                 {item.icone}
                                 {item.rotulo}
@@ -52,10 +115,10 @@ const Layout: React.FC<LayoutProps> = ({ children, aoNavegar }) => {
                     ))}
                 </nav>
                 <div className="p-4 border-t border-blue-700">
-                     <p className="text-sm text-blue-200 mb-2">Logado como: {usuario?.email}</p>
+                     <p className="text-sm text-blue-200 mb-2 truncate">Logado como: {usuario?.email}</p>
                      <button
                         onClick={logout}
-                        className="w-full flex items-center px-4 py-2 text-blue-100 rounded-md hover:bg-blue-700 hover:text-white transition-colors duration-200"
+                        className="w-full flex items-center px-4 py-3 text-blue-100 rounded-md hover:bg-blue-700 hover:text-white transition-colors duration-200"
                     >
                        {icones.logout}
                         Sair
@@ -64,7 +127,7 @@ const Layout: React.FC<LayoutProps> = ({ children, aoNavegar }) => {
             </aside>
 
             {/* Conteúdo Principal */}
-            <main className="flex-1 p-6 lg:p-10 overflow-auto">
+            <main className="flex-1 p-6 pt-20 lg:pt-6 lg:p-10 overflow-auto">
                 {children}
             </main>
         </div>
