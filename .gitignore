@@ -12,6 +12,17 @@ dist
 dist-ssr
 *.local
 
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Old/deprecated files (SQLite migration)
+*.bak
+*.backup
+servicos/
+constantes.ts
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

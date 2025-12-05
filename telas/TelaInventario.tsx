@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Pagina, Bem, Movimentacao } from '../tipos';
-import * as api from '../servicos/bancoDados';
-import { OPCOES_CATEGORIA, OPCOES_LOCALIZACAO } from '../constantes';
+import * as dataService from '../services/dataService';
+import { useReferenceData } from '../hooks/useReferenceData';
 
 // Componente Modal Interno
 interface ModalProps {
@@ -39,6 +39,7 @@ interface PropsTelaInventario {
 }
 
 const TelaInventario: React.FC<PropsTelaInventario> = ({ aoNavegar }) => {
+    const { categorias, localizacoes } = useReferenceData();
     const [bens, setBens] = useState<Bem[]>([]);
     const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
     const [carregando, setCarregando] = useState(true);
@@ -48,14 +49,23 @@ const TelaInventario: React.FC<PropsTelaInventario> = ({ aoNavegar }) => {
     const [modalImagemAberto, setModalImagemAberto] = useState(false);
     const [bemVisualizar, setBemVisualizar] = useState<Bem | null>(null);
 
-    const [filtrosBens, setFiltrosBens] = useState({ tombo: '', nome: '', categoria: '', localizacao: '', sala: '' });
+    const [filtrosBens, setFiltrosBens] = useState({ tombo: '', nome: '', categoriaId: '', localizacaoId: '', sala: '' });
     const [filtrosMov, setFiltrosMov] = useState({ tombo: '', pessoa: '', pastoral: '', status: ''});
+
+    // Helper functions to get names from IDs
+    const getCategoriaNome = (categoriaId: string) => {
+        return categorias.find(c => c.id === categoriaId)?.nome || 'N/A';
+    };
+
+    const getLocalizacaoNome = (localizacaoId: string) => {
+        return localizacoes.find(l => l.id === localizacaoId)?.nome || 'N/A';
+    };
 
     useEffect(() => {
         const carregarDados = async () => {
             setCarregando(true);
-            const dadosBens = await api.getBens();
-            const dadosMov = await api.getMovimentacoes();
+            const dadosBens = await dataService.getBens();
+            const dadosMov = await dataService.getMovimentacoes();
             setBens(dadosBens);
             setMovimentacoes(dadosMov.sort((a, b) => new Date(b.dataEmprestimo).getTime() - new Date(a.dataEmprestimo).getTime()));
             setCarregando(false);
@@ -87,19 +97,20 @@ const TelaInventario: React.FC<PropsTelaInventario> = ({ aoNavegar }) => {
         return bens.filter(bem =>
             bem.tombo.toLowerCase().includes(filtrosBens.tombo.toLowerCase()) &&
             bem.nome.toLowerCase().includes(filtrosBens.nome.toLowerCase()) &&
-            (filtrosBens.categoria === '' || bem.categoria === filtrosBens.categoria) &&
-            (filtrosBens.localizacao === '' || bem.localizacao === filtrosBens.localizacao) &&
+            (filtrosBens.categoriaId === '' || bem.categoriaId === filtrosBens.categoriaId) &&
+            (filtrosBens.localizacaoId === '' || bem.localizacaoId === filtrosBens.localizacaoId) &&
             bem.sala.toLowerCase().includes(filtrosBens.sala.toLowerCase())
         );
     }, [bens, filtrosBens]);
     
     const movimentacoesFiltradas = useMemo(() => {
         return movimentacoes
-            .filter(mov =>
-                mov.tombo.toLowerCase().includes(filtrosMov.tombo.toLowerCase()) &&
-                mov.pessoa.toLowerCase().includes(filtrosMov.pessoa.toLowerCase()) &&
-                mov.pastoral.toLowerCase().includes(filtrosMov.pastoral.toLowerCase())
-            )
+            .filter(mov => {
+                const tomboMov = mov.bem?.tombo || '';
+                return tomboMov.toLowerCase().includes(filtrosMov.tombo.toLowerCase()) &&
+                    mov.pessoa.toLowerCase().includes(filtrosMov.pessoa.toLowerCase()) &&
+                    mov.pastoral.toLowerCase().includes(filtrosMov.pastoral.toLowerCase());
+            })
             .filter(mov => {
                 if (filtrosMov.status === 'emprestado') return mov.dataDevolucao === null;
                 if (filtrosMov.status === 'devolvido') return mov.dataDevolucao !== null;
@@ -134,13 +145,13 @@ const TelaInventario: React.FC<PropsTelaInventario> = ({ aoNavegar }) => {
                         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4 p-4 bg-gray-50 rounded-md">
                             <input type="text" name="tombo" placeholder="Filtrar por Tombo" value={filtrosBens.tombo} onChange={handleMudancaFiltroBem} className="px-3 py-2 border border-gray-300 rounded-md"/>
                             <input type="text" name="nome" placeholder="Filtrar por Nome" value={filtrosBens.nome} onChange={handleMudancaFiltroBem} className="px-3 py-2 border border-gray-300 rounded-md"/>
-                             <select name="categoria" value={filtrosBens.categoria} onChange={handleMudancaFiltroBem} className="px-3 py-2 border border-gray-300 rounded-md bg-white">
+                             <select name="categoriaId" value={filtrosBens.categoriaId} onChange={handleMudancaFiltroBem} className="px-3 py-2 border border-gray-300 rounded-md bg-white">
                                 <option value="">Todas Categorias</option>
-                                {OPCOES_CATEGORIA.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                {categorias.map(cat => <option key={cat.id} value={cat.id}>{cat.nome}</option>)}
                             </select>
-                             <select name="localizacao" value={filtrosBens.localizacao} onChange={handleMudancaFiltroBem} className="px-3 py-2 border border-gray-300 rounded-md bg-white">
+                             <select name="localizacaoId" value={filtrosBens.localizacaoId} onChange={handleMudancaFiltroBem} className="px-3 py-2 border border-gray-300 rounded-md bg-white">
                                 <option value="">Todas Localizações</option>
-                                {OPCOES_LOCALIZACAO.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                {localizacoes.map(loc => <option key={loc.id} value={loc.id}>{loc.nome}</option>)}
                             </select>
                             <input type="text" name="sala" placeholder="Filtrar por Sala" value={filtrosBens.sala} onChange={handleMudancaFiltroBem} className="px-3 py-2 border border-gray-300 rounded-md"/>
                         </div>
@@ -162,8 +173,8 @@ const TelaInventario: React.FC<PropsTelaInventario> = ({ aoNavegar }) => {
                                     <td className="px-6 py-4 font-medium text-gray-900">{bem.tombo}</td>
                                     <td className="px-6 py-4">
                                         {(bem.fotoBem || bem.imagemTombo) ? (
-                                            <button 
-                                                onClick={() => abrirVisualizacaoImagem(bem)} 
+                                            <button
+                                                onClick={() => abrirVisualizacaoImagem(bem)}
                                                 className="text-blue-600 hover:text-blue-900 flex items-center space-x-1 font-medium"
                                                 title="Ver Fotos"
                                             >
@@ -178,8 +189,8 @@ const TelaInventario: React.FC<PropsTelaInventario> = ({ aoNavegar }) => {
                                         )}
                                     </td>
                                     <td className="px-6 py-4">{bem.nome}</td>
-                                    <td className="px-6 py-4">{bem.categoria}</td>
-                                    <td className="px-6 py-4">{bem.localizacao}</td>
+                                    <td className="px-6 py-4">{bem.categoria?.nome || getCategoriaNome(bem.categoriaId)}</td>
+                                    <td className="px-6 py-4">{bem.localizacao?.nome || getLocalizacaoNome(bem.localizacaoId)}</td>
                                     <td className="px-6 py-4">{bem.sala}</td>
                                 </tr>
                             ))}</tbody>
@@ -214,8 +225,8 @@ const TelaInventario: React.FC<PropsTelaInventario> = ({ aoNavegar }) => {
                                                     {estaEmprestado ? 'Emprestado' : 'Devolvido'}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4">{mov.tombo}</td>
-                                            <td className="px-6 py-4">{mov.nomeItem}</td>
+                                            <td className="px-6 py-4">{mov.bem?.tombo || 'N/A'}</td>
+                                            <td className="px-6 py-4">{mov.bem?.nome || 'N/A'}</td>
                                             <td className="px-6 py-4">{mov.pessoa}</td>
                                             <td className="px-6 py-4">{mov.pastoral}</td>
                                             <td className="px-6 py-4">{mov.dataEmprestimo}</td>

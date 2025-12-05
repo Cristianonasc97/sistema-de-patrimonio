@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Pagina, Bem, Movimentacao } from '../tipos';
-import * as api from '../servicos/bancoDados';
+import * as dataService from '../services/dataService';
+import { useReferenceData } from '../hooks/useReferenceData';
 
 declare const jspdf: any;
 declare const XLSX: any;
@@ -11,15 +12,29 @@ interface PropsTelaRelatorios {
 }
 
 const TelaRelatorios: React.FC<PropsTelaRelatorios> = ({ aoNavegar }) => {
+    const { categorias, localizacoes, tiposMovimentacao } = useReferenceData();
     const [bens, setBens] = useState<Bem[]>([]);
     const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
     const [carregando, setCarregando] = useState(true);
 
+    // Helper functions to get names from IDs
+    const getCategoriaNome = (categoriaId: string) => {
+        return categorias.find(c => c.id === categoriaId)?.nome || 'N/A';
+    };
+
+    const getLocalizacaoNome = (localizacaoId: string) => {
+        return localizacoes.find(l => l.id === localizacaoId)?.nome || 'N/A';
+    };
+
+    const getTipoMovimentacaoNome = (tipoId: string) => {
+        return tiposMovimentacao.find(t => t.id === tipoId)?.nome || 'N/A';
+    };
+
     useEffect(() => {
         const carregarDados = async () => {
             setCarregando(true);
-            const dadosBens = await api.getBens();
-            const dadosMov = await api.getMovimentacoes();
+            const dadosBens = await dataService.getBens();
+            const dadosMov = await dataService.getMovimentacoes();
             setBens(dadosBens);
             setMovimentacoes(dadosMov);
             setCarregando(false);
@@ -34,7 +49,13 @@ const TelaRelatorios: React.FC<PropsTelaRelatorios> = ({ aoNavegar }) => {
         (doc as any).autoTable({
             startY: 20,
             head: [['Tombo', 'Nome', 'Categoria', 'Localização', 'Sala']],
-            body: bens.map(b => [b.tombo, b.nome, b.categoria, b.localizacao, b.sala]),
+            body: bens.map(b => [
+                b.tombo,
+                b.nome,
+                b.categoria?.nome || getCategoriaNome(b.categoriaId),
+                b.localizacao?.nome || getLocalizacaoNome(b.localizacaoId),
+                b.sala
+            ]),
         });
         doc.save('relatorio_bens.pdf');
     };
@@ -42,7 +63,11 @@ const TelaRelatorios: React.FC<PropsTelaRelatorios> = ({ aoNavegar }) => {
     const exportarBensParaExcel = () => {
         const wb = XLSX.utils.book_new();
         const wsBens = XLSX.utils.json_to_sheet(bens.map(b => ({
-            Tombo: b.tombo, Nome: b.nome, Categoria: b.categoria, Localizacao: b.localizacao, Sala: b.sala
+            Tombo: b.tombo,
+            Nome: b.nome,
+            Categoria: b.categoria?.nome || getCategoriaNome(b.categoriaId),
+            Localizacao: b.localizacao?.nome || getLocalizacaoNome(b.localizacaoId),
+            Sala: b.sala
         })));
         XLSX.utils.book_append_sheet(wb, wsBens, "Bens");
         XLSX.writeFile(wb, "relatorio_bens.xlsx");
@@ -55,7 +80,14 @@ const TelaRelatorios: React.FC<PropsTelaRelatorios> = ({ aoNavegar }) => {
         (doc as any).autoTable({
             startY: 20,
             head: [['Tombo', 'Item', 'Pessoa', 'Tipo', 'Data Empréstimo', 'Data Devolução']],
-            body: movimentacoes.map(m => [m.tombo, m.nomeItem, m.pessoa, m.tipo, m.dataEmprestimo, m.dataDevolucao || 'N/A']),
+            body: movimentacoes.map(m => [
+                m.bem?.tombo || 'N/A',
+                m.bem?.nome || 'N/A',
+                m.pessoa,
+                m.tipoMovimentacao?.nome || getTipoMovimentacaoNome(m.tipoMovimentacaoId),
+                m.dataEmprestimo,
+                m.dataDevolucao || 'N/A'
+            ]),
         });
         doc.save('relatorio_movimentacoes.pdf');
     };
@@ -63,7 +95,14 @@ const TelaRelatorios: React.FC<PropsTelaRelatorios> = ({ aoNavegar }) => {
     const exportarMovimentacoesParaExcel = () => {
         const wb = XLSX.utils.book_new();
         const wsMovs = XLSX.utils.json_to_sheet(movimentacoes.map(m => ({
-            Tombo: m.tombo, Item: m.nomeItem, Pessoa: m.pessoa, Contato: m.contato, Pastoral: m.pastoral, Tipo: m.tipo, "Data Emprestimo": m.dataEmprestimo, "Data Devolucao": m.dataDevolucao
+            Tombo: m.bem?.tombo || 'N/A',
+            Item: m.bem?.nome || 'N/A',
+            Pessoa: m.pessoa,
+            Contato: m.contato,
+            Pastoral: m.pastoral,
+            Tipo: m.tipoMovimentacao?.nome || getTipoMovimentacaoNome(m.tipoMovimentacaoId),
+            "Data Emprestimo": m.dataEmprestimo,
+            "Data Devolucao": m.dataDevolucao || 'N/A'
         })));
         XLSX.utils.book_append_sheet(wb, wsMovs, "Movimentações");
         XLSX.writeFile(wb, "relatorio_movimentacoes.xlsx");
