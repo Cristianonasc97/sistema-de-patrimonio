@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { Usuario, ContextoAutenticacaoTipo } from '../tipos';
-import * as api from '../servicos/bancoDados';
+import * as authService from '../services/authService';
 
 const ContextoAutenticacao = createContext<ContextoAutenticacaoTipo | undefined>(undefined);
 
@@ -11,22 +11,20 @@ export const ProvedorAutenticacao: React.FC<{ children: ReactNode }> = ({ childr
     const [verificandoSessao, setVerificandoSessao] = useState<boolean>(true);
     const [erro, setErro] = useState<string | null>(null);
 
-    // Efeito para verificar se já existe usuário logado (persistência)
+    // Effect to restore session from JWT token
     useEffect(() => {
         const carregarSessao = async () => {
-            const idSalvo = localStorage.getItem('usuario_logado_id');
-            if (idSalvo) {
+            const token = localStorage.getItem('auth_token');
+            if (token) {
                 try {
-                    const usuarioRecuperado = await api.getUsuarioPorId(idSalvo);
-                    if (usuarioRecuperado) {
-                        setUsuario(usuarioRecuperado);
-                    } else {
-                        // Se o ID existe mas o usuário não (ex: banco limpo), remove o lixo
-                        localStorage.removeItem('usuario_logado_id');
-                    }
+                    // Call /api/auth/me to restore user session
+                    const usuarioRecuperado = await authService.getMe();
+                    setUsuario(usuarioRecuperado);
                 } catch (e) {
                     console.error("Erro ao restaurar sessão:", e);
-                    localStorage.removeItem('usuario_logado_id');
+                    // Token is invalid or expired, clear it
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('usuario_logado_id'); // Remove old key if exists
                 }
             }
             setVerificandoSessao(false);
@@ -39,9 +37,9 @@ export const ProvedorAutenticacao: React.FC<{ children: ReactNode }> = ({ childr
         setCarregando(true);
         setErro(null);
         try {
-            const usuarioLogado = await api.login(email, pass);
-            setUsuario(usuarioLogado);
-            localStorage.setItem('usuario_logado_id', usuarioLogado.id);
+            const { user, token } = await authService.login(email, pass);
+            setUsuario(user);
+            // Token is already stored by authService
         } catch (err: any) {
             setErro(err.message);
             throw err;
@@ -51,9 +49,8 @@ export const ProvedorAutenticacao: React.FC<{ children: ReactNode }> = ({ childr
     };
 
     const logout = () => {
-        api.logout();
+        authService.logout(); // Clears token from localStorage
         setUsuario(null);
-        localStorage.removeItem('usuario_logado_id');
     };
 
     const atualizarDadosLocais = (dados: Partial<Usuario>) => {

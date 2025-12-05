@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useAutenticacao } from '../hooks/useAutenticacao';
-import * as api from '../servicos/bancoDados';
+import * as authService from '../services/authService';
 
 const TelaAlterarSenhaForcada: React.FC = () => {
     const { usuario, atualizarDadosLocais, logout } = useAutenticacao();
@@ -25,12 +25,10 @@ const TelaAlterarSenhaForcada: React.FC = () => {
 
         setCarregando(true);
         try {
-            if (usuario) {
-                await api.alterarSenha(usuario.id, novaSenha);
-                // Atualiza o estado local para remover a flag de senha temporária
-                // Isso fará o App redirecionar automaticamente para o menu principal
-                atualizarDadosLocais({ tempPassword: false });
-            }
+            await authService.changePassword(novaSenha);
+            // Atualiza o estado local para remover a flag de senha temporária
+            // Isso fará o App redirecionar automaticamente para o menu principal
+            atualizarDadosLocais({ tempPassword: false });
         } catch (err: any) {
             setErro(err.message);
         } finally {

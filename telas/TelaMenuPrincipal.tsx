@@ -30,7 +30,7 @@ const TelaMenuPrincipal: React.FC<PropsMenuPrincipal> = ({ aoNavegar }) => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {itensMenu.map(item => (
-                    (!item.apenasAdmin || usuario?.perfil === Perfil.ADMIN) && (
+                    (!item.apenasAdmin || usuario?.perfil?.nome === Perfil.ADMIN) && (
                         <div
                             key={item.pagina}
                             onClick={() => aoNavegar(item.pagina)}

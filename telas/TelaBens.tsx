@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Bem, Pagina } from '../tipos';
-import * as api from '../servicos/bancoDados';
-import { OPCOES_CATEGORIA, OPCOES_LOCALIZACAO } from '../constantes';
+import * as dataService from '../services/dataService';
+import { useReferenceData } from '../hooks/useReferenceData';
 
 // Componente Modal interno
 interface ModalProps {
@@ -36,6 +36,7 @@ interface PropsTelaBens {
 }
 
 const TelaBens: React.FC<PropsTelaBens> = ({ aoNavegar }) => {
+    const { categorias, localizacoes } = useReferenceData();
     const [bens, setBens] = useState<Bem[]>([]);
     const [carregando, setCarregando] = useState(true);
     
@@ -58,7 +59,7 @@ const TelaBens: React.FC<PropsTelaBens> = ({ aoNavegar }) => {
     const carregarBens = useCallback(async () => {
         setCarregando(true);
         try {
-            const dados = await api.getBens();
+            const dados = await dataService.getBens();
             setBens(dados);
         } catch (e: any) {
             mostrarFeedback('Erro ao carregar lista de bens: ' + e.message, 'erro');
@@ -84,10 +85,10 @@ const TelaBens: React.FC<PropsTelaBens> = ({ aoNavegar }) => {
 
     const salvarBem = async (bem: Bem) => {
         if (bemEditando) {
-            await api.updateBem(bem);
+            await dataService.updateBem(bemEditando.id, bem);
             mostrarFeedback('Item atualizado com sucesso!');
         } else {
-            await api.addBem(bem);
+            await dataService.addBem(bem);
             mostrarFeedback('Item cadastrado com sucesso!');
         }
         await carregarBens();
@@ -102,9 +103,9 @@ const TelaBens: React.FC<PropsTelaBens> = ({ aoNavegar }) => {
 
     const handleConfirmarExclusao = async () => {
         if (!bemParaExcluir) return;
-        
+
         try {
-            await api.deleteBem(bemParaExcluir.id);
+            await dataService.deleteBem(bemParaExcluir.id);
             // Atualizar UI removendo o item
             setBens(bensAtuais => bensAtuais.filter(bem => bem.id !== bemParaExcluir!.id));
             mostrarFeedback('Bem excluído com sucesso!');
@@ -115,6 +116,18 @@ const TelaBens: React.FC<PropsTelaBens> = ({ aoNavegar }) => {
             setModalExclusaoAberto(false);
             setBemParaExcluir(null);
         }
+    };
+
+    // Helper function to get categoria nome by ID
+    const getCategoriaNome = (categoriaId: string) => {
+        const categoria = categorias.find(c => c.id === categoriaId);
+        return categoria?.nome || 'N/A';
+    };
+
+    // Helper function to get localizacao nome by ID
+    const getLocalizacaoNome = (localizacaoId: string) => {
+        const localizacao = localizacoes.find(l => l.id === localizacaoId);
+        return localizacao?.nome || 'N/A';
     };
 
     return (
@@ -156,8 +169,8 @@ const TelaBens: React.FC<PropsTelaBens> = ({ aoNavegar }) => {
                                         {bem.fotoBem && <img src={bem.fotoBem} alt="Bem" className="w-8 h-8 object-cover rounded border" title="Foto do Bem" />}
                                     </td>
                                     <td className="px-6 py-4">{bem.nome}</td>
-                                    <td className="px-6 py-4">{bem.categoria}</td>
-                                    <td className="px-6 py-4">{bem.localizacao}</td>
+                                    <td className="px-6 py-4">{getCategoriaNome(bem.categoriaId)}</td>
+                                    <td className="px-6 py-4">{getLocalizacaoNome(bem.localizacaoId)}</td>
                                     <td className="px-6 py-4">{bem.sala}</td>
                                     <td className="px-6 py-4">
                                         <button onClick={() => abrirModal(bem)} className="font-medium text-blue-600 hover:underline mr-4">Editar</button>
@@ -172,7 +185,13 @@ const TelaBens: React.FC<PropsTelaBens> = ({ aoNavegar }) => {
 
             {/* Modal de Cadastro/Edição */}
             <Modal isOpen={modalAberto} onClose={fecharModal} titulo={bemEditando ? 'Editar Bem' : 'Cadastrar Bem'}>
-                <FormularioBem bem={bemEditando} aoSalvar={salvarBem} aoCancelar={fecharModal} />
+                <FormularioBem
+                    bem={bemEditando}
+                    aoSalvar={salvarBem}
+                    aoCancelar={fecharModal}
+                    categorias={categorias}
+                    localizacoes={localizacoes}
+                />
             </Modal>
 
             {/* Modal de Confirmação de Exclusão */}
@@ -209,16 +228,18 @@ const TelaBens: React.FC<PropsTelaBens> = ({ aoNavegar }) => {
 
 interface PropsFormularioBem {
     bem: Bem | null;
-    aoSalvar: (bem: Bem) => Promise<void>;
+    aoSalvar: (bem: any) => Promise<void>;
     aoCancelar: () => void;
+    categorias: Array<{ id: string; nome: string }>;
+    localizacoes: Array<{ id: string; nome: string }>;
 }
 
-const FormularioBem: React.FC<PropsFormularioBem> = ({ bem, aoSalvar, aoCancelar }) => {
-    const [dadosForm, setDadosForm] = useState<Omit<Bem, 'id'>>({
+const FormularioBem: React.FC<PropsFormularioBem> = ({ bem, aoSalvar, aoCancelar, categorias, localizacoes }) => {
+    const [dadosForm, setDadosForm] = useState({
         tombo: bem?.tombo || '',
         nome: bem?.nome || '',
-        categoria: bem?.categoria || OPCOES_CATEGORIA[0].value,
-        localizacao: bem?.localizacao || OPCOES_LOCALIZACAO[0].value,
+        categoriaId: bem?.categoriaId || (categorias[0]?.id || ''),
+        localizacaoId: bem?.localizacaoId || (localizacoes[0]?.id || ''),
         sala: bem?.sala || '',
         imagemTombo: bem?.imagemTombo || null,
         fotoBem: bem?.fotoBem || null,
@@ -267,7 +288,7 @@ const FormularioBem: React.FC<PropsFormularioBem> = ({ bem, aoSalvar, aoCancelar
         setErro(null);
         setEnviando(true);
         try {
-            await aoSalvar({ id: bem?.id || '', ...dadosForm });
+            await aoSalvar(dadosForm);
         } catch (err: any) {
             setErro(err.message);
             setEnviando(false);
@@ -323,14 +344,14 @@ const FormularioBem: React.FC<PropsFormularioBem> = ({ bem, aoSalvar, aoCancelar
 
             <div>
                 <label className="block text-sm font-medium text-gray-700">Categoria</label>
-                <select name="categoria" value={dadosForm.categoria} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                    {OPCOES_CATEGORIA.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                <select name="categoriaId" value={dadosForm.categoriaId} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    {categorias.map(cat => <option key={cat.id} value={cat.id}>{cat.nome}</option>)}
                 </select>
             </div>
              <div>
                 <label className="block text-sm font-medium text-gray-700">Localização</label>
-                <select name="localizacao" value={dadosForm.localizacao} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                    {OPCOES_LOCALIZACAO.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                <select name="localizacaoId" value={dadosForm.localizacaoId} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    {localizacoes.map(loc => <option key={loc.id} value={loc.id}>{loc.nome}</option>)}
                 </select>
             </div>
              <div>

@@ -1,6 +1,7 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { ProvedorAutenticacao, useAutenticacao } from './hooks/useAutenticacao';
+import { ReferenceDataProvider } from './hooks/useReferenceData';
 import { Pagina, Perfil } from './tipos';
 import TelaLogin from './telas/TelaLogin';
 import TelaMenuPrincipal from './telas/TelaMenuPrincipal';
@@ -27,7 +28,7 @@ const obterPaginaDaUrl = (): Pagina => {
     return Pagina.MENU_PRINCIPAL;
 };
 
-const ConteudoApp: React.FC = () => {
+const ConteudoAppComReferencias: React.FC = () => {
     const { usuario, verificandoSessao } = useAutenticacao();
 
     // Inicializa o estado com o valor da URL ou Menu Principal
@@ -75,7 +76,7 @@ const ConteudoApp: React.FC = () => {
                 return <TelaRelatorios aoNavegar={navegarPara} />;
             case Pagina.USUARIOS:
                 // Verificação de segurança: apenas admins acessam esta página
-                if (usuario?.perfil === Perfil.ADMIN) {
+                if (usuario?.perfil?.nome === Perfil.ADMIN) {
                     return <TelaUsuarios aoNavegar={navegarPara} />;
                 }
                 // Se não for admin, renderiza o menu principal (sem alterar state durante render)
@@ -104,16 +105,18 @@ const ConteudoApp: React.FC = () => {
     }
 
     return (
-        <Layout aoNavegar={navegarPara}>
-            {renderizarConteudo}
-        </Layout>
+        <ReferenceDataProvider usuario={usuario}>
+            <Layout aoNavegar={navegarPara}>
+                {renderizarConteudo}
+            </Layout>
+        </ReferenceDataProvider>
     );
 };
 
 const App: React.FC = () => {
     return (
         <ProvedorAutenticacao>
-            <ConteudoApp />
+            <ConteudoAppComReferencias />
         </ProvedorAutenticacao>
     );
 };

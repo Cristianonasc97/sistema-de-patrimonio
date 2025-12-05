@@ -39,7 +39,7 @@ const Layout: React.FC<LayoutProps> = ({ children, aoNavegar }) => {
                 </div>
                 <nav className="flex-1 px-2 py-4 space-y-2">
                     {itensMenu.map(item => (
-                        (!item.apenasAdmin || usuario?.perfil === 'ADMIN') && (
+                        (!item.apenasAdmin || usuario?.perfil?.nome === 'ADMIN') && (
                             <button
                                 key={item.pagina}
                                 onClick={() => aoNavegar(item.pagina)}

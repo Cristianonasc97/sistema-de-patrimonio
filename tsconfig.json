@@ -20,22 +20,24 @@
     "index.tsx",
     "App.tsx",
     "tipos.ts",
-    "constantes.ts",
     "vite.config.ts",
+    "vite-env.d.ts",
     "componentes/**/*",
     "telas/**/*",
     "hooks/**/*",
-    "servicos/**/*"
+    "services/**/*",
+    "config/**/*"
   ],
   "exclude": [
     "node_modules",
     "dist",
     "**/*.spec.ts",
     "screens",
-    "services",
     "components",
     "hooks/useAuth.tsx",
     "types.ts",
-    "constants.ts"
+    "constants.ts",
+    "constantes.ts",
+    "servicos/**/*"
   ]
 }

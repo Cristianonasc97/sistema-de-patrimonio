@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useAutenticacao } from '../hooks/useAutenticacao';
-import * as api from '../servicos/bancoDados';
+import * as authService from '../services/authService';
 
 const TelaLogin: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -30,11 +30,11 @@ const TelaLogin: React.FC = () => {
         setRecupStatus(null);
         setRecupCarregando(true);
         try {
-            const novaSenha = await api.recuperarSenha(recupLogin, recupEmail);
-            // Simulação de envio de email
+            const novaSenha = await authService.recoverPassword(recupLogin, recupEmail);
+            // Note: Backend handles email sending, but showing temp password here for dev
             setRecupStatus({
                 tipo: 'sucesso',
-                msg: `Identidade confirmada! Como este é um sistema local (sem servidor de e-mail), sua SENHA TEMPORÁRIA é: [ ${novaSenha} ]. Copie e use para entrar.`
+                msg: `Senha temporária enviada para o e-mail de recuperação cadastrado. Senha: ${novaSenha}. Use-a para fazer login.`
             });
         } catch (err: any) {
             setRecupStatus({ tipo: 'erro', msg: err.message });

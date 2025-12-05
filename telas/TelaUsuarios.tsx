@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Pagina, Usuario, Perfil } from '../tipos';
-import * as api from '../servicos/bancoDados';
-import { OPCOES_PERFIL } from '../constantes';
+import * as userService from '../services/userService';
+import { useReferenceData } from '../hooks/useReferenceData';
 
 // Componente Modal interno (Reutilizando padrão da tela de Bens)
 interface ModalProps {
@@ -35,13 +35,14 @@ interface PropsTelaUsuarios {
 }
 
 const TelaUsuarios: React.FC<PropsTelaUsuarios> = ({ aoNavegar }) => {
+    const { perfis } = useReferenceData();
     const [usuarios, setUsuarios] = useState<Usuario[]>([]);
     const [carregando, setCarregando] = useState(true);
     const [email, setEmail] = useState('');
     const [emailRecuperacao, setEmailRecuperacao] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [perfil, setPerfil] = useState<Perfil>(Perfil.USER);
+    const [perfilId, setPerfilId] = useState<string>('');
     const [enviando, setEnviando] = useState(false);
     const [feedback, setFeedback] = useState<{ tipo: 'sucesso' | 'erro', mensagem: string } | null>(null);
 
@@ -61,7 +62,7 @@ const TelaUsuarios: React.FC<PropsTelaUsuarios> = ({ aoNavegar }) => {
     const carregarUsuarios = useCallback(async () => {
         setCarregando(true);
         try {
-            const dados = await api.getUsuarios();
+            const dados = await userService.getUsuarios();
             setUsuarios(dados);
         } catch (erro: any) {
             mostrarFeedback(`Erro ao carregar usuários: ${erro.message}`, 'erro');
@@ -84,12 +85,12 @@ const TelaUsuarios: React.FC<PropsTelaUsuarios> = ({ aoNavegar }) => {
 
         setEnviando(true);
         try {
-            await api.addUsuario({ email, password, perfil, emailRecuperacao });
+            await userService.addUsuario({ email, password, perfilId, emailRecuperacao });
             setEmail('');
             setEmailRecuperacao('');
             setPassword('');
             setConfirmPassword('');
-            setPerfil(Perfil.USER);
+            setPerfilId('');
             mostrarFeedback('Usuário cadastrado com sucesso!');
             await carregarUsuarios();
         } catch (erro: any) {
@@ -110,9 +111,9 @@ const TelaUsuarios: React.FC<PropsTelaUsuarios> = ({ aoNavegar }) => {
         const usuariosOriginais = [...usuarios];
         // Atualização otimista
         setUsuarios(usuariosAtuais => usuariosAtuais.filter(u => u.id !== usuarioParaExcluir.id));
-        
+
         try {
-            await api.deleteUsuario(usuarioParaExcluir.id);
+            await userService.deleteUsuario(usuarioParaExcluir.id);
             mostrarFeedback('Usuário excluído com sucesso');
         } catch (erro: any) {
             // Reverter em caso de erro
@@ -214,8 +215,9 @@ const TelaUsuarios: React.FC<PropsTelaUsuarios> = ({ aoNavegar }) => {
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Nível de Acesso</label>
-                            <select value={perfil} onChange={e => setPerfil(e.target.value as Perfil)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                                 {OPCOES_PERFIL.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            <select value={perfilId} onChange={e => setPerfilId(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Selecione um perfil</option>
+                                {perfis.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
                             </select>
                         </div>
                         
@@ -245,11 +247,11 @@ const TelaUsuarios: React.FC<PropsTelaUsuarios> = ({ aoNavegar }) => {
                                         <tr key={u.id} className="bg-white border-b hover:bg-gray-50">
                                             <td className="px-6 py-4">{u.email}</td>
                                             <td className="px-6 py-4">{u.emailRecuperacao || '-'}</td>
-                                            <td className="px-6 py-4">{u.perfil}</td>
+                                            <td className="px-6 py-4">{u.perfil?.nome || 'N/A'}</td>
                                             <td className="px-6 py-4">
-                                                <button 
-                                                    onClick={() => handleSolicitarExclusao(u)} 
-                                                    className="font-medium text-red-600 hover:underline disabled:text-gray-400 disabled:hover:no-underline disabled:cursor-not-allowed" 
+                                                <button
+                                                    onClick={() => handleSolicitarExclusao(u)}
+                                                    className="font-medium text-red-600 hover:underline disabled:text-gray-400 disabled:hover:no-underline disabled:cursor-not-allowed"
                                                     disabled={u.email === 'admin@email.com'}
                                                     title={u.email === 'admin@email.com' ? 'O administrador padrão não pode ser excluído.' : 'Excluir usuário'}
                                                 >
